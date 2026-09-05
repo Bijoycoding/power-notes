@@ -3,761 +3,239 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Build APK</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Night Glow Flower Animation - Realistic</title>
 <style>
-  :root{
-    --bg:#f3f5fb;
-    --panel:#ffffff;
-    --panel-raised:#fffaf0;
-    --grid:#e8ebf5;
-    --hair:#dfe3ef;
-    --ink:#161c2e;
-    --muted:#6a7290;
-    --muted-dim:#a6acc4;
-    --brass:#b8791d;
-    --brass-fill:#dda23f;
-    --brass-soft:#fbead0;
-    --signal:#128a72;
-    --danger:#c9433b;
-    --console-bg:#0c0f1a;
-    --console-text:#93a0c2;
-    --console-ok:#4fd1a5;
-    --console-now:#e0a742;
-    --console-err:#ff8686;
-    --sans:'Inter', -apple-system, sans-serif;
-    --display:'Space Grotesk', var(--sans);
-    --mono:'IBM Plex Mono', monospace;
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; font-family:'Segoe UI',sans-serif; }
+  body { display:flex; align-items:flex-end; justify-content:center; min-height:100vh; background:#02040a; overflow:hidden; }
+  .night { position:fixed; inset:0;
+    background-image:
+      radial-gradient(ellipse at top, rgba(40,60,90,0.4) 0%, transparent 55%),
+      radial-gradient(ellipse at bottom, #030712, rgba(30,140,160,0.2)),
+      linear-gradient(180deg, #010205 0%, #04101a 60%, #06161f 100%); }
+  .stars { position:absolute; inset:0; }
+  .star { position:absolute; background:#fff; border-radius:50%; animation: twinkle ease-in-out infinite; }
+  @keyframes twinkle { 0%,100%{opacity:0.15;} 50%{opacity:1;} }
+  .shoot { position:absolute; width:70px; height:2px; background:linear-gradient(to left, #fff, transparent);
+    top:12%; left:-10%; opacity:0; transform:rotate(18deg); animation: shoot-move 7s ease-in 1.5s infinite; }
+  @keyframes shoot-move {
+    0% { opacity:0; transform:translate(0,0) rotate(18deg); }
+    2% { opacity:1; }
+    8% { opacity:0; transform:translate(60vw,25vh) rotate(18deg); }
+    100% { opacity:0; }
   }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    background:
-      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/100% 28px,
-      var(--bg);
-    color:var(--ink);
-    font-family:var(--sans);
-    padding:18px 14px 40px;
-    line-height:1.5;
-    -webkit-tap-highlight-color:transparent;
-  }
-  .wrap{max-width:520px; margin:0 auto;}
+  .moon-wrap { position:absolute; top:5%; right:11%; width:100px; height:100px; }
+  .moon { position:absolute; top:15px; left:15px; width:70px; height:70px; border-radius:50%;
+    background: radial-gradient(circle at 35% 35%, #f8fbff, #d3e3f0 55%, #a9c2d6 100%);
+    box-shadow: 0 0 60px 22px rgba(190,215,240,0.4); animation: moon-glow 5s ease-in-out infinite; }
+  .moon::before, .moon::after { content:""; position:absolute; border-radius:50%; background:rgba(160,185,205,0.4); }
+  .moon::before { width:14px; height:14px; top:14px; left:10px; }
+  .moon::after { width:9px; height:9px; top:34px; left:40px; }
+  @keyframes moon-glow { 0%,100%{opacity:0.92;} 50%{opacity:1;} }
 
-  /* ---------- Header ---------- */
-  header{
-    display:flex; align-items:flex-end; justify-content:space-between;
-    padding-bottom:16px; margin-bottom:18px; border-bottom:1px solid var(--hair);
-  }
-  header .title-block h1{
-    font-family:var(--display); font-weight:700; font-size:22px; letter-spacing:-.01em; color:var(--ink);
-  }
-  header .title-block p{font-size:12.5px; color:var(--muted); margin-top:3px;}
-  header .id-tag{
-    font-family:var(--mono); font-size:10.5px; color:var(--brass);
-    border:1px solid var(--brass-soft); background:var(--brass-soft); border-radius:4px; padding:3px 7px;
-    white-space:nowrap;
+  .mist { position:absolute; left:-20%; width:140%; height:60px; bottom:14vh;
+    background: linear-gradient(to top, rgba(120,220,210,0.12), transparent);
+    filter: blur(8px); animation: mist-drift 18s ease-in-out infinite; }
+  @keyframes mist-drift { 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(4%); } }
+
+  .firefly { position:absolute; width:4px; height:4px; border-radius:50%; background:#c8ffb0;
+    box-shadow:0 0 8px 3px rgba(200,255,170,0.8); opacity:0; animation: firefly-move ease-in-out infinite; }
+  @keyframes firefly-move {
+    0% { opacity:0; transform:translate(0,0); }
+    20% { opacity:1; }
+    50% { transform:translate(var(--fx,20px), var(--fy,-24px)); }
+    80% { opacity:1; }
+    100% { opacity:0; transform:translate(var(--fx2,-16px), var(--fy2,-40px)); }
   }
 
-  /* ---------- Connection strip ---------- */
-  .connect{
-    border:1px solid var(--hair); border-radius:10px; margin-bottom:16px; overflow:hidden;
-    background:var(--panel);
-  }
-  .connect summary{
-    list-style:none; cursor:pointer; padding:12px 14px;
-    display:flex; align-items:center; justify-content:space-between;
-    font-size:12.5px; color:var(--muted); font-weight:500;
-  }
-  .connect summary::-webkit-details-marker{display:none;}
-  .connect summary .dot{
-    width:6px; height:6px; border-radius:50%; background:var(--muted-dim); margin-right:8px; display:inline-block;
-  }
-  .connect summary .lead{display:flex; align-items:center;}
-  .connect summary .chev{font-family:var(--mono); transition:transform .15s;}
-  .connect[open] summary .chev{transform:rotate(90deg);}
-  .connect-body{padding:2px 14px 16px; border-top:1px solid var(--hair);}
+  .scene { position:relative; width:100%; height:100vh; }
+  .ground { position:absolute; left:0; right:0; bottom:0; height:16vh;
+    background: linear-gradient(to bottom, #06251f 0%, #021009 100%);
+    box-shadow: inset 0 14px 22px rgba(0,255,220,0.07); }
+  .ground::before { content:""; position:absolute; top:0; left:0; right:0; height:6px;
+    background: linear-gradient(90deg, transparent, rgba(90,240,220,0.25), transparent); }
 
-  /* ---------- Section ---------- */
-  .section{margin-bottom:16px;}
-  .section-head{
-    display:flex; align-items:baseline; gap:9px; margin-bottom:10px; padding:0 2px;
-  }
-  .section-head .tag{
-    font-family:var(--mono); font-size:10.5px; color:var(--brass); letter-spacing:.02em;
-  }
-  .section-head h2{
-    font-family:var(--display); font-size:14px; font-weight:600; color:var(--ink);
-  }
-  .panel{
-    background:var(--panel); border:1px solid var(--hair); border-radius:10px; padding:16px;
-    box-shadow:0 1px 2px rgba(20,26,46,.03);
-  }
+  .ground-shadow { position:absolute; bottom:15.6vh; width:110px; height:14px;
+    background: radial-gradient(ellipse, rgba(0,0,0,0.5), transparent 70%); border-radius:50%; }
 
-  .field{margin-bottom:13px;}
-  .field:last-child{margin-bottom:0;}
-  .field label{
-    display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:500;
-  }
-  input[type=text], input[type=password], textarea{
-    width:100%; background:#f7f8fc; border:1px solid var(--hair); border-radius:7px;
-    padding:11px 12px; font-size:14px; color:var(--ink); font-family:var(--sans);
-  }
-  input::placeholder, textarea::placeholder{color:var(--muted-dim);}
-  textarea{font-family:var(--mono); font-size:12px; min-height:130px; resize:vertical; line-height:1.6;}
-  input:focus, textarea:focus{outline:none; border-color:var(--brass);}
-  .field .note{font-size:11px; color:var(--muted-dim); margin-top:5px;}
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .plant { position:absolute; bottom:16vh; transform-origin:bottom center;
+    animation: sway 4.5s ease-in-out infinite alternate; }
+  @keyframes sway { from{transform:translateX(-50%) rotate(-2.6deg);} to{transform:translateX(-50%) rotate(2.6deg);} }
 
-  /* ---------- segmented control ---------- */
-  .seg{
-    display:flex; background:#f7f8fc; border:1px solid var(--hair); border-radius:8px; padding:3px; margin-bottom:12px;
-  }
-  .seg-opt{
-    flex:1; text-align:center; padding:8px 6px; border-radius:6px; font-size:12.5px; font-weight:500;
-    color:var(--muted); cursor:pointer;
-  }
-  .seg-opt.active{background:#fff; color:var(--brass); border:1px solid var(--brass-soft); box-shadow:0 1px 3px rgba(20,26,46,.06);}
+  .pot { position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); width:70px; height:44px;
+    background: linear-gradient(135deg, #123c3a, #0a2523 60%, #051614);
+    clip-path: polygon(14% 0, 86% 0, 100% 100%, 0% 100%);
+    box-shadow: inset -6px 0 8px rgba(0,0,0,0.4), 0 0 10px rgba(30,140,130,0.25); }
+  .pot-rim { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); width:78px; height:10px;
+    background: linear-gradient(180deg, #1c5450, #0d302d); border-radius:6px;
+    box-shadow: 0 0 8px rgba(30,140,130,0.3); }
+  .soil { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); width:58px; height:7px;
+    background: radial-gradient(ellipse, #16110a, #08050300); border-radius:50%; opacity:0.8; }
 
-  /* ---------- icon picker ---------- */
-  .icon-picker{display:flex; align-items:center; gap:12px;}
-  .icon-frame{
-    width:52px; height:52px; border-radius:11px; background:#f7f8fc; border:1px solid var(--hair);
-    display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;
-  }
-  .icon-frame img{width:100%; height:100%; object-fit:cover;}
-  .icon-frame .ph{font-size:18px; color:var(--muted-dim);}
-  .icon-choose{
-    flex:1; border:1px dashed var(--hair); border-radius:9px; padding:12px; text-align:center;
-    font-size:12.5px; color:var(--muted); cursor:pointer;
-  }
-  .icon-choose b{color:var(--ink); display:block; font-size:13px; margin-bottom:2px;}
-  #iconInput{display:none;}
+  .stem { position:absolute; bottom:44px; left:50%; width:6px; height:0;
+    background: linear-gradient(to top, #0b5c56, #14a89c 60%, #4ff0e0);
+    border-radius:4px; transform:translateX(-50%);
+    box-shadow: 0 0 10px rgba(60,240,220,0.5);
+    animation: grow-stem 2.3s ease-out forwards; }
+  @keyframes grow-stem { to { height:var(--sh,240px); } }
 
-  /* ---------- toggles ---------- */
-  .toggle-list .toggle{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:11px 0; border-bottom:1px solid var(--hair);
-  }
-  .toggle-list .toggle:last-child{border-bottom:none;}
-  .toggle .label{font-size:13.5px; font-weight:500; color:var(--ink);}
-  .auto-chip{
-    font-family:var(--mono); font-size:9px; font-weight:600; color:var(--brass);
-    background:var(--brass-soft); border-radius:5px; padding:1.5px 6px; margin-left:7px; letter-spacing:.02em;
-    vertical-align:middle;
-  }
-  .exp-chip{
-    font-family:var(--mono); font-size:9px; font-weight:600; color:var(--danger);
-    background:#fdeceb; border-radius:5px; padding:1.5px 6px; margin-left:7px; letter-spacing:.02em;
-    vertical-align:middle;
-  }
-  .switch input:disabled + .rail{opacity:.55; cursor:not-allowed;}
-  .toggle .sub{font-size:11px; color:var(--muted); margin-top:2px;}
-  .switch{position:relative; width:42px; height:24px; flex-shrink:0;}
-  .switch input{opacity:0; width:0; height:0;}
-  .switch .rail{position:absolute; inset:0; background:var(--hair); border-radius:24px; transition:.18s;}
-  .switch .rail::before{
-    content:""; position:absolute; width:18px; height:18px; left:3px; top:3px;
-    background:#fff; border-radius:50%; transition:.18s; box-shadow:0 1px 3px rgba(20,26,46,.25);
-  }
-  .switch input:checked + .rail{background:var(--brass-fill);}
-  .switch input:checked + .rail::before{transform:translateX(18px);}
+  .leaf { position:absolute; width:44px; height:56px;
+    border-radius:51% 49% 47% 53%/44% 45% 55% 69%;
+    background: linear-gradient(to top, #0e6b62, #4ff0e0);
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.25), 0 0 12px rgba(60,240,220,0.4);
+    opacity:0; transform:scale(0);
+    animation: leaf-pop 0.8s cubic-bezier(.34,1.56,.64,1) forwards; }
+  .leaf::after { content:""; position:absolute; top:45%; left:10%; width:70%; height:1.5px;
+    background:rgba(255,255,255,0.3); transform:rotate(-6deg); }
+  @keyframes leaf-pop { to { opacity:0.95; transform:scale(1); } }
 
-  /* ---------- build button ---------- */
-  .build-btn{
-    width:100%; background:var(--brass-fill); color:#241a05; border:none; border-radius:10px;
-    padding:16px; font-family:var(--display); font-size:14.5px; font-weight:700;
-    letter-spacing:.02em; cursor:pointer; margin-top:6px;
-    box-shadow:0 2px 8px rgba(221,162,63,.35);
-    position:relative; overflow:hidden;
-    display:flex; align-items:center; justify-content:center; gap:9px;
-    transition:box-shadow .3s ease;
-  }
-  .build-btn:disabled{background:var(--hair); color:var(--muted-dim); box-shadow:none;}
-  .build-btn:active:not(:disabled){transform:translateY(1px);}
-  .build-btn.building{
-    background:var(--brass-fill); color:#241a05; cursor:default;
-    animation:btnGlow 1.8s ease-in-out infinite;
-  }
-  .build-btn.building::after{
-    content:""; position:absolute; inset:0;
-    background:linear-gradient(100deg, transparent 0%, rgba(255,255,255,.55) 45%, transparent 65%);
-    background-size:220% 100%;
-    animation:btnSheen 1.6s linear infinite;
-  }
-  @keyframes btnGlow{
-    0%,100%{ box-shadow:0 2px 8px rgba(221,162,63,.35); }
-    50%{ box-shadow:0 2px 22px rgba(221,162,63,.75); }
-  }
-  @keyframes btnSheen{
-    0%{ background-position:130% 0; }
-    100%{ background-position:-30% 0; }
-  }
-  .spinner-ring{
-    width:15px; height:15px; border-radius:50%;
-    border:2px solid rgba(36,26,5,.35); border-top-color:#241a05;
-    animation:spin .7s linear infinite; flex-shrink:0;
-  }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .bud { position:absolute; left:50%; transform:translateX(-50%) scale(0);
+    width:22px; height:30px; border-radius:50%/60% 60% 40% 40%;
+    background: linear-gradient(to top, #0e6b62, #4ff0e0); opacity:0;
+    box-shadow:0 0 14px rgba(60,240,220,0.5);
+    animation: bud-in 0.7s ease-out forwards; }
+  @keyframes bud-in { to { opacity:0.95; transform:translateX(-50%) scale(1); } }
 
-  /* ---------- console/log (kept dark deliberately, like an embedded instrument panel) ---------- */
-  #statusPanel{display:none; margin-top:14px;}
-  #statusPanel.show{display:block;}
-  .progress-track{height:3px; background:var(--hair); border-radius:3px; overflow:hidden; margin-bottom:10px;}
-  .progress-fill{height:100%; background:var(--brass-fill); width:0%; transition:width .6s ease; position:relative; overflow:hidden;}
-  .progress-fill::after{
-    content:""; position:absolute; inset:0;
-    background:linear-gradient(100deg, transparent 0%, rgba(255,255,255,.6) 50%, transparent 100%);
-    background-size:200% 100%; animation:btnSheen 1.3s linear infinite;
-  }
-  .console{
-    background:var(--console-bg); border:1px solid #1c2338; border-radius:8px; padding:12px 13px;
-    font-family:var(--mono); font-size:11.5px; color:var(--console-text); max-height:210px; overflow-y:auto;
-    transition:box-shadow .3s ease;
-  }
-  #statusPanel.show .console{ animation:consolePulse 2.4s ease-in-out infinite; }
-  @keyframes consolePulse{
-    0%,100%{ box-shadow:0 0 0 rgba(224,167,66,0); }
-    50%{ box-shadow:0 0 0 1px rgba(224,167,66,.25); }
-  }
-  .console .row{padding:2.5px 0;}
-  .console .ok{color:var(--console-ok);}
-  .console .now{color:var(--console-now);}
-  .console .err{color:var(--console-err);}
+  .flower { position:absolute; left:50%; transform:translateX(-50%) scale(0); opacity:0;
+    animation: bloom-in 0.9s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes bloom-in { to { opacity:1; transform:translateX(-50%) scale(1); } }
 
-  /* ---------- result / manifest stub ---------- */
-  .result{display:none; margin-top:16px;}
-  .result.show{display:block;}
-  .manifest{
-    border:1px solid var(--brass-soft); border-radius:10px; overflow:hidden; background:var(--panel);
-    box-shadow:0 4px 16px rgba(20,26,46,.06);
-  }
-  .manifest .strip{
-    background:var(--brass-fill); color:#241a05; font-family:var(--mono); font-size:10.5px;
-    padding:6px 14px; letter-spacing:.03em;
-  }
-  .manifest .body{padding:20px 16px; text-align:center;}
-  .manifest .body h3{font-family:var(--display); font-size:16px; margin-bottom:4px; color:var(--ink);}
-  .manifest .body p{font-size:12px; color:var(--muted); margin-bottom:16px;}
-  .dl-btn{
-    display:inline-block; background:var(--ink); color:#fff; text-decoration:none;
-    font-weight:700; font-size:14px; padding:13px 28px; border-radius:9px; font-family:var(--display);
-  }
-  .link-row{
-    display:flex; gap:8px; margin-bottom:14px;
-  }
-  .link-row input{
-    flex:1; background:#f7f8fc; border:1px solid var(--hair); border-radius:8px;
-    padding:10px 11px; font-size:11.5px; font-family:var(--mono); color:var(--muted);
-  }
-  .copy-btn{
-    width:40px; height:40px; flex-shrink:0; border-radius:8px; background:var(--brass-fill);
-    color:#241a05; display:flex; align-items:center; justify-content:center;
-    font-size:16px; cursor:pointer;
-  }
-  .copy-btn.copied{background:var(--signal); color:#fff;}
-  .copy-btn:active{transform:scale(.93);}
+  .petal { position:absolute; width:26px; height:48px; left:-13px; top:-48px;
+    border-radius:51% 49% 47% 53%/44% 45% 55% 69%;
+    background: linear-gradient(to top, #0aa9c9, #9df7ff);
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.45), 0 0 18px rgba(90,230,255,0.7);
+    transform-origin:bottom center; opacity:0.96; }
+  .petal::after { content:""; position:absolute; top:16%; left:47%; width:1.5px; height:60%; background:rgba(255,255,255,0.5); }
+  .petal:nth-child(1){transform:rotate(0deg);}
+  .petal:nth-child(2){transform:rotate(51deg);}
+  .petal:nth-child(3){transform:rotate(102deg);}
+  .petal:nth-child(4){transform:rotate(153deg);}
+  .petal:nth-child(5){transform:rotate(204deg);}
+  .petal:nth-child(6){transform:rotate(255deg);}
+  .petal:nth-child(7){transform:rotate(306deg);}
 
-  /* ---------- history ---------- */
-  .hist-item{
-    display:flex; align-items:center; gap:11px;
-    padding:12px 0; border-bottom:1px solid var(--hair);
-  }
-  .hist-item:last-child{border-bottom:none;}
-  .hist-icon{
-    width:36px; height:36px; border-radius:9px; background:var(--brass-soft); color:var(--brass);
-    display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:13px; flex-shrink:0;
-  }
-  .hist-info{flex:1; min-width:0;}
-  .hist-info .name{font-size:13.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .hist-info .meta{font-size:11px; color:var(--muted); margin-top:1px;}
-  .hist-actions{display:flex; gap:6px; flex-shrink:0;}
-  .hist-btn{
-    width:32px; height:32px; border-radius:8px; border:1px solid var(--hair); background:#f7f8fc;
-    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px;
-    color:var(--muted);
-  }
-  .hist-btn:active{transform:scale(.94);}
-  .hist-btn.danger:active{background:#fdecea;}
-  .hist-empty{font-size:12px; color:var(--muted-dim); text-align:center; padding:10px 0;}
+  .flower-center { position:absolute; width:26px; height:26px; left:-13px; top:-48px; border-radius:50%;
+    background: radial-gradient(circle at 35% 35%, #fffbe0, #ffe27a 55%, #e6a929 100%);
+    box-shadow: 0 0 22px 7px rgba(255,220,120,0.65), inset 0 0 6px rgba(0,0,0,0.2); }
+  .flower-center::after { content:""; position:absolute; inset:5px; border-radius:50%;
+    background-image: radial-gradient(circle, #b97e12 1.2px, transparent 1.2px); background-size:5px 5px; opacity:0.4; }
+
+  .glow-under { position:absolute; left:50%; transform:translateX(-50%);
+    width:130px; height:130px; border-radius:50%;
+    background: radial-gradient(circle, rgba(90,230,255,0.32), transparent 70%);
+    filter: blur(8px); opacity:0; animation: glow-fade-in 1s ease forwards; }
+  @keyframes glow-fade-in { to { opacity:1; } }
+
+  .light { position:absolute; width:5px; height:5px; border-radius:50%;
+    background:#7ff7ff; box-shadow:0 0 8px 3px rgba(120,245,255,0.7);
+    opacity:0; animation: light-rise 4s linear infinite; }
+  .light:nth-child(odd) { background:#ffe27a; box-shadow:0 0 8px 3px rgba(255,226,122,0.7); }
+  @keyframes light-rise { 0%{opacity:0; transform:translateY(0);} 15%{opacity:1;} 85%{opacity:1;} 100%{opacity:0; transform:translateY(-160px);} }
+
+  .grass { position:absolute; bottom:16vh; width:4px; height:0; border-radius:4px 4px 0 0;
+    background: linear-gradient(to top, #0b5c56, #14a89c); box-shadow:0 0 6px rgba(60,200,190,0.5);
+    transform-origin:bottom center;
+    animation: grass-grow 1.5s ease-out forwards, grass-sway 3s ease-in-out infinite; }
+  @keyframes grass-grow { to { height:var(--gh,30px); } }
+  @keyframes grass-sway { 0%,100%{transform:rotate(var(--gr,-5deg));} 50%{transform:rotate(calc(var(--gr,-5deg) * -1));} }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="night"></div>
+<div class="stars" id="stars"></div>
+<div class="shoot"></div>
+<div class="moon-wrap"><div class="moon"></div></div>
+<div class="mist"></div>
+<div id="fireflies"></div>
 
-  <header>
-    <div class="title-block">
-      <h1>Build APK</h1>
-      <p>ওয়েব প্রজেক্ট থেকে সরাসরি Android প্যাকেজ</p>
-    </div>
-    <div class="id-tag">CAP · v6.2.1</div>
-  </header>
+<div class="scene">
+  <div class="grass" style="left:10%; --gh:26px; --gr:-6deg; animation-delay:0.1s,0s;"></div>
+  <div class="grass" style="left:15%; --gh:38px; --gr:5deg; animation-delay:0.3s,0.2s;"></div>
+  <div class="grass" style="left:88%; --gh:30px; --gr:6deg; animation-delay:0.2s,0.1s;"></div>
+  <div class="grass" style="left:93%; --gh:22px; --gr:-4deg; animation-delay:0.5s,0.4s;"></div>
+  <div class="grass" style="left:34%; --gh:20px; --gr:-3deg; animation-delay:0.6s,0.5s;"></div>
+  <div class="grass" style="left:66%; --gh:24px; --gr:4deg; animation-delay:0.4s,0.3s;"></div>
 
-  <details class="connect" id="connectBox">
-    <summary>
-      <span class="lead"><span class="dot"></span>GitHub সংযোগ</span>
-      <span class="chev">›</span>
-    </summary>
-    <div class="connect-body">
-      <div class="field">
-        <label>Personal access token</label>
-        <input type="password" id="pat" placeholder="ghp_xxxxxxxxxxxx">
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label>Owner</label>
-          <input type="text" id="owner" placeholder="Bijoycoding">
-        </div>
-        <div class="field">
-          <label>Repo</label>
-          <input type="text" id="repo" placeholder="power-notes">
-        </div>
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label>Workflow ফাইল</label>
-          <input type="text" id="workflowFile" value="build-apk.yml">
-        </div>
-        <div class="field">
-          <label>Branch</label>
-          <input type="text" id="branch" value="main">
-        </div>
-      </div>
-    </div>
-  </details>
-
-  <div class="section">
-    <div class="section-head"><span class="tag">01</span><h2>অ্যাপের পরিচয়</h2></div>
-    <div class="panel">
-      <div class="field">
-        <label>App name</label>
-        <input type="text" id="appName" placeholder="My Web App">
-      </div>
-      <div class="field">
-        <label>Package name</label>
-        <input type="text" id="appId" placeholder="com.myapp.main">
-        <p class="note">ছোট হাতের অক্ষর, ডট দিয়ে আলাদা — com.bijoy.powernotes</p>
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label>Version name</label>
-          <input type="text" id="versionName" value="1.0">
-        </div>
-        <div class="field">
-          <label>Version code</label>
-          <input type="text" id="versionCode" value="1">
-        </div>
-      </div>
+  <div class="ground-shadow" style="left:calc(50% - 55px); transform:translateX(-50%);"></div>
+  <div class="plant" style="left:calc(50% - 55px);">
+    <div class="pot-rim"></div><div class="soil"></div><div class="pot"></div>
+    <div class="stem" style="--sh:170px;"></div>
+    <div class="leaf" style="bottom:110px; left:calc(50% - 40px); transform:rotate(55deg); animation-delay:1.1s;"></div>
+    <div class="leaf" style="bottom:150px; left:calc(50% + 2px); transform:rotate(-55deg) scaleX(-1); animation-delay:1.4s;"></div>
+    <div class="bud" style="bottom:260px; width:18px; height:24px; animation-delay:1.8s;"></div>
+    <div class="glow-under" style="bottom:236px;"></div>
+    <div class="flower" style="bottom:256px; animation-delay:2.4s;">
+      <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+      <div class="petal"></div><div class="petal"></div><div class="petal"></div><div class="petal"></div>
+      <div class="flower-center"></div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-head"><span class="tag">02</span><h2>সোর্স ও কানেকশন</h2></div>
-    <div class="panel">
-      <div class="seg">
-        <div class="seg-opt active" id="srcCode">কোড পেস্ট</div>
-        <div class="seg-opt" id="srcUrl">ওয়েবসাইট URL</div>
-      </div>
-      <div class="field" id="codeField">
-        <textarea id="html_content" placeholder="&lt;!DOCTYPE html&gt;
-&lt;html&gt;...&lt;/html&gt;"></textarea>
-        <p class="note">CSS ও JS ইনলাইন সহ সম্পূর্ণ HTML — Online mode টগল কোড স্ক্যান করে স্বয়ংক্রিয় সেট হবে</p>
-      </div>
-      <div class="field" id="urlField" style="display:none;">
-        <input type="text" id="websiteUrl" placeholder="https://example.com">
-        <p class="note">অ্যাপ প্রতিবার এই লাইভ লিংক লোড করবে</p>
-      </div>
+  <div class="ground-shadow" style="left:50%; transform:translateX(-50%);"></div>
+  <div class="plant" style="left:50%; z-index:2;">
+    <div class="pot-rim"></div><div class="soil"></div><div class="pot"></div>
+    <div class="stem" style="--sh:250px;"></div>
+    <div class="leaf" style="bottom:140px; left:calc(50% - 46px); transform:rotate(55deg); animation-delay:1.3s;"></div>
+    <div class="leaf" style="bottom:190px; left:calc(50% + 4px); transform:rotate(-55deg) scaleX(-1); animation-delay:1.6s;"></div>
+    <div class="bud" style="bottom:330px; animation-delay:2.1s;"></div>
+    <div class="glow-under" style="bottom:300px;"></div>
+    <div class="flower" style="bottom:326px; animation-delay:2.7s;">
+      <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+      <div class="petal"></div><div class="petal"></div><div class="petal"></div><div class="petal"></div>
+      <div class="flower-center"></div>
+    </div>
+    <div class="light" style="left:calc(50% - 40px); bottom:380px; animation-delay:3.4s;"></div>
+    <div class="light" style="left:calc(50% + 30px); bottom:400px; animation-delay:3.9s;"></div>
+    <div class="light" style="left:calc(50% - 10px); bottom:440px; animation-delay:4.4s;"></div>
+    <div class="light" style="left:calc(50% + 50px); bottom:360px; animation-delay:2.9s;"></div>
+  </div>
+
+  <div class="ground-shadow" style="left:calc(50% + 55px); transform:translateX(-50%);"></div>
+  <div class="plant" style="left:calc(50% + 55px);">
+    <div class="pot-rim"></div><div class="soil"></div><div class="pot"></div>
+    <div class="stem" style="--sh:150px;"></div>
+    <div class="leaf" style="bottom:100px; left:calc(50% - 38px); transform:rotate(55deg); animation-delay:1s;"></div>
+    <div class="leaf" style="bottom:135px; left:calc(50% + 2px); transform:rotate(-55deg) scaleX(-1); animation-delay:1.3s;"></div>
+    <div class="bud" style="bottom:236px; width:16px; height:22px; animation-delay:1.6s;"></div>
+    <div class="glow-under" style="bottom:212px;"></div>
+    <div class="flower" style="bottom:232px; animation-delay:2.2s;">
+      <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+      <div class="petal"></div><div class="petal"></div><div class="petal"></div><div class="petal"></div>
+      <div class="flower-center"></div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-head"><span class="tag">03</span><h2>আইকন</h2></div>
-    <div class="panel">
-      <div class="icon-picker">
-        <div class="icon-frame" id="iconFrame"><span class="ph">◇</span></div>
-        <label class="icon-choose" for="iconInput">
-          <b>ছবি বেছে নিন</b>
-          স্কয়ার, 512×512 PNG
-        </label>
-        <input type="file" id="iconInput" accept="image/*">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-head"><span class="tag">04</span><h2>আচরণ</h2></div>
-    <div class="panel toggle-list">
-      <div class="toggle">
-        <div>
-          <div class="label">Online mode<span class="auto-chip" id="onlineAutoChip">অটো</span></div>
-          <div class="sub" id="onlineModeSub">অফ থাকলে ইন্টারনেট সম্পূর্ণ বন্ধ (permission-ই থাকবে না)</div>
-        </div>
-        <label class="switch"><input type="checkbox" id="onlineMode"><span class="rail"></span></label>
-      </div>
-      <div class="toggle">
-        <div><div class="label">Fullscreen</div><div class="sub">স্ট্যাটাস বার লুকায়</div></div>
-        <label class="switch"><input type="checkbox" id="fullscreen"><span class="rail"></span></label>
-      </div>
-      <div class="toggle">
-        <div><div class="label">Exit confirmation</div><div class="sub">বের হওয়ার আগে জিজ্ঞাসা করে</div></div>
-        <label class="switch"><input type="checkbox" id="exitConfirmation" checked><span class="rail"></span></label>
-      </div>
-      <div class="toggle">
-        <div><div class="label">Dark mode</div><div class="sub">সিস্টেম থিম অনুসরণ করে</div></div>
-        <label class="switch"><input type="checkbox" id="darkMode"><span class="rail"></span></label>
-      </div>
-      <div class="toggle">
-        <div><div class="label">PC mode</div><div class="sub">ডেস্কটপ ভিউতে সাইট লোড হবে</div></div>
-        <label class="switch"><input type="checkbox" id="pcMode"><span class="rail"></span></label>
-      </div>
-      <div class="toggle">
-        <div>
-          <div class="label">Asset encryption<span class="exp-chip">এক্সপেরিমেন্টাল</span></div>
-          <div class="sub">AES-256 — ফাইল ম্যানেজারে কোড পড়া যাবে না</div>
-        </div>
-        <label class="switch"><input type="checkbox" id="assetEncryption"><span class="rail"></span></label>
-      </div>
-    </div>
-  </div>
-
-  <button class="build-btn" id="buildBtn">Build APK</button>
-
-  <div id="statusPanel">
-    <div class="progress-track"><div class="progress-fill" id="progressBar"></div></div>
-    <div class="console" id="log"></div>
-  </div>
-
-  <div class="result" id="result">
-    <div class="manifest">
-      <div class="strip" id="manifestStrip">PACKAGE READY</div>
-      <div class="body">
-        <h3 id="resultTitle">তৈরি হয়ে গেছে</h3>
-        <p>সরাসরি APK ডাউনলোড লিংক — যেকোনো ব্রাউজারে কাজ করবে, লগইন লাগবে না</p>
-        <div class="link-row">
-          <input type="text" id="downloadLinkText" readonly>
-          <div class="copy-btn" id="copyBtn" title="কপি">⧉</div>
-        </div>
-        <a class="dl-btn" id="downloadLink" href="#" target="_blank" rel="noopener">Open Download</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="section" id="historySection" style="display:none;">
-    <div class="section-head"><span class="tag">05</span><h2>হিস্ট্রি</h2></div>
-    <div class="panel" id="historyList"></div>
-  </div>
-
+  <div class="ground"></div>
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-
-// ---- source segmented control ----
-function detectOnline(html){
-  if(!html || !html.trim()) return false;
-  return /https?:\/\//i.test(html)
-      || /\bfetch\s*\(/i.test(html)
-      || /XMLHttpRequest/i.test(html)
-      || /\baxios[.(]/i.test(html)
-      || /\bWebSocket\s*\(/i.test(html);
-}
-
-function applyAutoOnlineState(){
-  const isOnline = detectOnline($('html_content').value);
-  $('onlineMode').checked = isOnline;
-}
-
-$('srcCode').onclick = ()=>{
-  $('srcCode').classList.add('active'); $('srcUrl').classList.remove('active');
-  $('codeField').style.display='block'; $('urlField').style.display='none';
-  $('onlineMode').disabled = false;
-  $('onlineAutoChip').style.display = 'inline';
-  $('onlineModeSub').textContent = 'অফ থাকলে ইন্টারনেট সম্পূর্ণ বন্ধ (permission-ই থাকবে না)';
-  applyAutoOnlineState();
-};
-$('srcUrl').onclick = ()=>{
-  $('srcUrl').classList.add('active'); $('srcCode').classList.remove('active');
-  $('urlField').style.display='block'; $('codeField').style.display='none';
-  $('onlineMode').checked = true;
-  $('onlineMode').disabled = true;
-  $('onlineAutoChip').style.display = 'none';
-  $('onlineModeSub').textContent = 'ওয়েবসাইট লিংক সবসময় ইন্টারনেট ব্যবহার করে';
-};
-$('html_content').addEventListener('input', applyAutoOnlineState);
-applyAutoOnlineState();
-
-// ---- persist connection settings ----
-['pat','owner','repo','workflowFile','branch'].forEach(id=>{
-  const saved = localStorage.getItem('apkb_'+id);
-  if(saved) $(id).value = saved;
-  $(id).addEventListener('change', ()=> localStorage.setItem('apkb_'+id, $(id).value));
-});
-
-// ---- icon preview ----
-let logoBase64 = null;
-$('iconInput').addEventListener('change', e=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{
-    logoBase64 = reader.result.split(',')[1];
-    $('iconFrame').innerHTML = `<img src="${reader.result}">`;
-  };
-  reader.readAsDataURL(file);
-});
-
-// ---- logging ----
-function log(msg, cls=''){
-  const d = document.createElement('div');
-  d.className = 'row ' + cls;
-  d.textContent = '· ' + msg;
-  $('log').appendChild(d);
-  $('log').scrollTop = $('log').scrollHeight;
-}
-function setProgress(p){ $('progressBar').style.width = p+'%'; }
-
-function ghHeaders(){
-  return {
-    'Authorization': 'Bearer ' + $('pat').value.trim(),
-    'Accept': 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2022-11-28'
-  };
-}
-function b64EncodeUtf8(str){ return btoa(unescape(encodeURIComponent(str))); }
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-async function putFile(owner, repo, path, contentBase64, message, branch){
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-  let sha = null;
-  try{
-    const r = await fetch(url + `?ref=${branch}`, { headers: ghHeaders() });
-    if(r.ok){ const j = await r.json(); sha = j.sha; }
-  }catch(e){}
-  const body = { message, content: contentBase64, branch };
-  if(sha) body.sha = sha;
-  const res = await fetch(url, { method:'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
-  if(!res.ok){
-    const err = await res.text();
-    throw new Error('ফাইল লিখতে ব্যর্থ (' + path + '): ' + res.status + ' ' + err.slice(0,200));
+  const starsEl = document.getElementById('stars');
+  for (let i = 0; i < 90; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = (Math.random() * 1.8 + 0.8).toFixed(1);
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 60 + '%';
+    s.style.animationDuration = (Math.random() * 2 + 2) + 's';
+    s.style.animationDelay = (Math.random() * 3) + 's';
+    starsEl.appendChild(s);
   }
-}
-
-async function dispatchWorkflow(owner, repo, workflowFile, branch, inputs){
-  const url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowFile}/dispatches`;
-  const res = await fetch(url, { method:'POST', headers: ghHeaders(), body: JSON.stringify({ ref: branch, inputs }) });
-  if(!res.ok){
-    const err = await res.text();
-    throw new Error('workflow চালু করা যায়নি: ' + res.status + ' ' + err.slice(0,200));
+  const flyEl = document.getElementById('fireflies');
+  for (let i = 0; i < 12; i++) {
+    const f = document.createElement('div');
+    f.className = 'firefly';
+    f.style.left = (10 + Math.random() * 80) + '%';
+    f.style.top = (55 + Math.random() * 30) + '%';
+    f.style.setProperty('--fx', (Math.random() * 60 - 30) + 'px');
+    f.style.setProperty('--fy', (Math.random() * -60 - 10) + 'px');
+    f.style.setProperty('--fx2', (Math.random() * 60 - 30) + 'px');
+    f.style.setProperty('--fy2', (Math.random() * -100 - 20) + 'px');
+    f.style.animationDuration = (Math.random() * 3 + 5) + 's';
+    f.style.animationDelay = (Math.random() * 5) + 's';
+    flyEl.appendChild(f);
   }
-}
-
-async function findNewRun(owner, repo, workflowFile, afterTime){
-  for(let i=0;i<20;i++){
-    await sleep(3000);
-    const url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowFile}/runs?per_page=5`;
-    const res = await fetch(url, { headers: ghHeaders() });
-    if(res.ok){
-      const j = await res.json();
-      const run = (j.workflow_runs||[]).find(r => new Date(r.created_at).getTime() >= afterTime - 5000);
-      if(run) return run;
-    }
-  }
-  throw new Error('নতুন run খুঁজে পাওয়া যায়নি — Actions ট্যাবে ম্যানুয়ালি চেক করুন।');
-}
-
-async function pollRun(owner, repo, runId){
-  while(true){
-    await sleep(6000);
-    const url = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}`;
-    const res = await fetch(url, { headers: ghHeaders() });
-    const j = await res.json();
-    log(`স্ট্যাটাস: ${j.status}${j.conclusion ? ' → '+j.conclusion : ''}`);
-    if(j.status === 'completed') return j;
-  }
-}
-
-function copyToClipboard(text){
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    return navigator.clipboard.writeText(text);
-  }
-  const ta = document.createElement('textarea');
-  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-  document.body.appendChild(ta); ta.focus(); ta.select();
-  try{ document.execCommand('copy'); }catch(e){}
-  document.body.removeChild(ta);
-  return Promise.resolve();
-}
-
-const HISTORY_KEY = 'apkb_history';
-
-function loadHistory(){
-  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }catch(e){ return []; }
-}
-function saveHistoryArr(arr){ localStorage.setItem(HISTORY_KEY, JSON.stringify(arr)); }
-
-function addHistoryEntry(entry){
-  const arr = loadHistory();
-  arr.unshift(entry);
-  saveHistoryArr(arr.slice(0, 30));
-  renderHistory();
-}
-
-function removeHistoryEntry(id){
-  const arr = loadHistory().filter(e => e.id !== id);
-  saveHistoryArr(arr);
-  renderHistory();
-}
-
-function fmtDate(ts){
-  const d = new Date(ts);
-  return d.toLocaleDateString('bn-BD', {day:'numeric', month:'short'}) + ' · ' + d.toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'});
-}
-
-function renderHistory(){
-  const arr = loadHistory();
-  const box = $('historyList');
-  const section = $('historySection');
-  if(arr.length === 0){ section.style.display = 'none'; box.innerHTML = ''; return; }
-  section.style.display = 'block';
-  box.innerHTML = '';
-  arr.forEach(entry=>{
-    const row = document.createElement('div');
-    row.className = 'hist-item';
-    row.innerHTML = `
-      <div class="hist-icon">◇</div>
-      <div class="hist-info">
-        <div class="name">${entry.appName}</div>
-        <div class="meta">${fmtDate(entry.ts)} · ${entry.repo}</div>
-      </div>
-      <div class="hist-actions">
-        <div class="hist-btn" title="কপি লিংক">⧉</div>
-        <div class="hist-btn" title="খুলুন">⬇</div>
-        <div class="hist-btn danger" title="Remove">✕</div>
-      </div>`;
-    const [copyEl, openEl, rmBtn] = row.querySelectorAll('.hist-btn');
-    copyEl.onclick = ()=>{
-      copyToClipboard(entry.url);
-      copyEl.textContent = '✓';
-      setTimeout(()=> copyEl.textContent = '⧉', 1200);
-    };
-    openEl.onclick = ()=> window.open(entry.url, '_blank', 'noopener');
-    rmBtn.onclick = ()=> removeHistoryEntry(entry.id);
-    box.appendChild(row);
-  });
-}
-renderHistory();
-
-$('copyBtn').addEventListener('click', ()=>{
-  copyToClipboard($('downloadLinkText').value);
-  $('copyBtn').classList.add('copied');
-  $('copyBtn').textContent = '✓';
-  setTimeout(()=>{ $('copyBtn').classList.remove('copied'); $('copyBtn').textContent = '⧉'; }, 1200);
-});
-
-$('buildBtn').addEventListener('click', async ()=>{
-  const owner = $('owner').value.trim();
-  const repo = $('repo').value.trim();
-  const workflowFile = $('workflowFile').value.trim();
-  const branch = $('branch').value.trim() || 'main';
-  const appName = $('appName').value.trim();
-  const appId = $('appId').value.trim();
-  const usingUrl = $('srcUrl').classList.contains('active');
-  const html = $('html_content').value;
-  const websiteUrl = $('websiteUrl').value.trim();
-
-  if(!$('pat').value.trim() || !owner || !repo || !appName || !appId){
-    alert('GitHub সংযোগ (টোকেন, owner, repo) ও App name / Package name অবশ্যই পূরণ করুন।');
-    return;
-  }
-  if(usingUrl && !websiteUrl){ alert('Website URL দিন।'); return; }
-  if(!usingUrl && !html.trim()){ alert('HTML কোড পেস্ট করুন।'); return; }
-
-  $('buildBtn').disabled = true;
-  $('buildBtn').classList.add('building');
-  $('buildBtn').innerHTML = '<span class="spinner-ring"></span><span>প্যাকেজিং হচ্ছে…</span>';
-  $('statusPanel').classList.add('show');
-  $('result').classList.remove('show');
-  $('log').innerHTML = '';
-  setProgress(5);
-
-  try{
-    if(!usingUrl){
-      log('www/index.html লেখা হচ্ছে...');
-      await putFile(owner, repo, 'www/index.html', b64EncodeUtf8(html), 'Update via Build APK app', branch);
-      log('index.html সেভ', 'ok');
-    } else {
-      log('URL মোডের জন্য প্লেসহোল্ডার রাখা হচ্ছে...');
-      await putFile(owner, repo, 'www/index.html', b64EncodeUtf8('<html><body>Loading...</body></html>'), 'Placeholder for URL mode', branch);
-    }
-    setProgress(15);
-
-    if(logoBase64){
-      log('আইকন আপলোড হচ্ছে...');
-      await putFile(owner, repo, 'resources/icon.png', logoBase64, 'Add icon via Build APK app', branch);
-      log('আইকন সেভ', 'ok');
-    }
-    setProgress(25);
-
-    const releaseTag = 'build-' + Date.now();
-    const assetName = appName.replace(/\s+/g,'_') + '.apk';
-
-    const inputs = {
-      app_name: appName,
-      app_id: appId,
-      version_name: $('versionName').value.trim() || '1.0',
-      version_code: $('versionCode').value.trim() || '1',
-      source_type: usingUrl ? 'url' : 'html',
-      website_url: usingUrl ? websiteUrl : '',
-      online_mode: String($('onlineMode').checked),
-      fullscreen: String($('fullscreen').checked),
-      exit_confirmation: String($('exitConfirmation').checked),
-      dark_mode: String($('darkMode').checked),
-      pc_mode: String($('pcMode').checked),
-      asset_encryption: String($('assetEncryption').checked),
-      release_tag: releaseTag
-    };
-
-    log('বিল্ড চালু করা হচ্ছে...');
-    const dispatchTime = Date.now();
-    await dispatchWorkflow(owner, repo, workflowFile, branch, inputs);
-    setProgress(35);
-
-    log('run খোঁজা হচ্ছে...');
-    const run = await findNewRun(owner, repo, workflowFile, dispatchTime);
-    log(`run #${run.run_number} শুরু হয়েছে`, 'ok');
-    setProgress(45);
-
-    log('প্যাকেজিং চলছে...', 'now');
-    const finished = await pollRun(owner, repo, run.id);
-    setProgress(85);
-
-    if(finished.conclusion !== 'success'){
-      throw new Error('বিল্ড ব্যর্থ। Actions ট্যাবে লগ দেখুন।');
-    }
-    log('বিল্ড সফল', 'ok');
-
-    log('ডাউনলোড লিংক তৈরি হচ্ছে...');
-    const artifactUrl = `https://github.com/${owner}/${repo}/releases/download/${releaseTag}/${assetName}`;
-    setProgress(100);
-
-    $('downloadLink').href = artifactUrl;
-    $('downloadLinkText').value = artifactUrl;
-    $('resultTitle').textContent = appName;
-    $('result').classList.add('show');
-    log('সম্পন্ন', 'ok');
-
-    addHistoryEntry({
-      id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
-      appName, owner, repo, runId: run.id, url: artifactUrl, ts: Date.now()
-    });
-
-  }catch(err){
-    log('এরর: ' + err.message, 'err');
-  }finally{
-    $('buildBtn').disabled = false;
-    $('buildBtn').classList.remove('building');
-    $('buildBtn').textContent = 'Build APK';
-  }
-});
 </script>
 </body>
 </html>
