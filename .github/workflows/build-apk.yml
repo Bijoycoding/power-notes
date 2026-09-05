@@ -426,4 +426,3 @@ jobs:
           gh release create "${{ inputs.release_tag }}" "$ASSET_NAME" \
             --title "${{ inputs.app_name }}" \
             --notes "Built automatically via the Build APK app."
-.
