@@ -1,0 +1,429 @@
+# =====================================================================
+# Build APK — turns a pasted HTML/CSS/JS project (or a live website URL)
+# into a signed-for-testing Android APK, published as a direct-download
+# GitHub Release asset.
+#
+# Triggered only manually (workflow_dispatch), normally via the
+# "Build APK" companion web app, which fills in every input below.
+# =====================================================================
+
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      # ---- App identity -------------------------------------------------
+      app_name:
+        description: 'App name (shown under the icon)'
+        required: true
+      app_id:
+        description: 'Package name, e.g. com.bijoy.myapp'
+        required: true
+      version_name:
+        description: 'Version name, e.g. 1.0'
+        required: false
+        default: '1.0'
+      version_code:
+        description: 'Version code (integer)'
+        required: false
+        default: '1'
+
+      # ---- Content source -------------------------------------------------
+      source_type:
+        description: "'html' (bundled code) or 'url' (live website)"
+        required: false
+        default: 'html'
+      website_url:
+        description: 'Website URL — required when source_type is url'
+        required: false
+        default: ''
+      online_mode:
+        description: 'Allow navigation to external links/APIs from bundled HTML'
+        required: false
+        default: 'false'
+      asset_encryption:
+        description: '[EXPERIMENTAL] AES-256 encrypt bundled HTML/CSS/JS so they cannot be read via a file manager / zip extractor'
+        required: false
+        default: 'false'
+
+      # ---- Behaviour toggles -------------------------------------------------
+      fullscreen:
+        description: 'Hide the status bar'
+        required: false
+        default: 'false'
+      exit_confirmation:
+        description: 'Ask for confirmation before exiting the app'
+        required: false
+        default: 'false'
+      dark_mode:
+        description: 'Inject a color-scheme meta tag into bundled HTML'
+        required: false
+        default: 'false'
+      pc_mode:
+        description: 'Load content with a desktop user-agent'
+        required: false
+        default: 'false'
+
+      # ---- Release -------------------------------------------------
+      release_tag:
+        description: 'Unique tag for this build — becomes the direct download URL'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+
+      # ------------------------------------------------------------------
+      # 1. Checkout + toolchain
+      # ------------------------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Print toolchain versions
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          node -v
+          npm -v
+
+      # ------------------------------------------------------------------
+      # 2. Bootstrap project files (safe on a brand-new, empty repo too)
+      # ------------------------------------------------------------------
+      - name: Ensure base project files exist
+        run: |
+          mkdir -p www
+          [ -f www/index.html ] || echo "<html><body>Hello</body></html>" > www/index.html
+          [ -f package.json ] || npm init -y
+          if [ ! -f capacitor.config.json ]; then
+            cat > capacitor.config.json << 'EOF'
+          {
+            "appId": "com.placeholder.app",
+            "appName": "Placeholder",
+            "webDir": "www"
+          }
+          EOF
+          fi
+
+      - name: Pin Capacitor to a known-stable version
+        # Capacitor 8.x needs a newer JDK/AGP toolchain than this runner
+        # ships with by default — 6.2.1 builds reliably on JDK 17.
+        run: npm install @capacitor/core@6.2.1 @capacitor/cli@6.2.1 @capacitor/android@6.2.1 --save-exact
+
+      - name: Install root dependencies
+        run: npm install
+
+      # ------------------------------------------------------------------
+      # 3. Apply content + config
+      # ------------------------------------------------------------------
+      - name: Inject dark mode meta tag
+        if: ${{ inputs.source_type == 'html' && inputs.dark_mode == 'true' }}
+        run: |
+          if [ -f www/index.html ]; then
+            sed -i 's#<head>#<head>\n<meta name="color-scheme" content="dark light">#' www/index.html
+          fi
+
+      - name: Write capacitor.config.json
+        run: |
+          if [ "${{ inputs.source_type }}" = "url" ] && [ -n "${{ inputs.website_url }}" ]; then
+            cat > capacitor.config.json << EOF
+          {
+            "appId": "${{ inputs.app_id }}",
+            "appName": "${{ inputs.app_name }}",
+            "webDir": "www",
+            "server": {
+              "url": "${{ inputs.website_url }}",
+              "cleartext": true,
+              "allowNavigation": ["*"]
+            }
+          }
+          EOF
+          elif [ "${{ inputs.online_mode }}" = "true" ]; then
+            cat > capacitor.config.json << EOF
+          {
+            "appId": "${{ inputs.app_id }}",
+            "appName": "${{ inputs.app_name }}",
+            "webDir": "www",
+            "server": {
+              "cleartext": true,
+              "allowNavigation": ["*"]
+            }
+          }
+          EOF
+          else
+            cat > capacitor.config.json << EOF
+          {
+            "appId": "${{ inputs.app_id }}",
+            "appName": "${{ inputs.app_name }}",
+            "webDir": "www"
+          }
+          EOF
+          fi
+
+      # ------------------------------------------------------------------
+      # 4. Android platform
+      # ------------------------------------------------------------------
+      - name: Remove old android project
+        run: rm -rf android
+
+      - name: Add fresh android platform
+        run: npx cap add android
+
+      - name: 🔍 Diagnostics — baseline build.gradle
+        run: |
+          echo "---- android/variables.gradle ----"
+          cat android/variables.gradle || echo "MISSING"
+          echo "---- android/app/build.gradle (first 30 lines) ----"
+          sed -n '1,30p' android/app/build.gradle || echo "MISSING"
+
+      - name: Apply app icon (if uploaded)
+        run: |
+          if [ -f resources/icon.png ]; then
+            npm install @capacitor/assets --save-dev
+            npx capacitor-assets generate --android
+          fi
+
+      - name: 🔍 Diagnostics — build.gradle after icon step
+        run: |
+          echo "---- android/app/build.gradle (first 30 lines) ----"
+          sed -n '1,30p' android/app/build.gradle || echo "MISSING"
+
+      - name: Enforce network policy (strip INTERNET permission when offline)
+        # source_type=url always needs the network. For source_type=html,
+        # only keep INTERNET/ACCESS_NETWORK_STATE permissions when the user
+        # explicitly turned Online mode on — otherwise the OS itself will
+        # refuse every network call the app makes, regardless of JS tricks.
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ "${{ inputs.source_type }}" = "html" ] && [ "${{ inputs.online_mode }}" != "true" ]; then
+            echo "Offline mode: removing INTERNET permission from manifest"
+            sed -i '/android.permission.INTERNET/d' "$MANIFEST"
+            sed -i '/android.permission.ACCESS_NETWORK_STATE/d' "$MANIFEST"
+          else
+            echo "Online mode: leaving network permissions in place"
+          fi
+          echo "---- Final permissions in manifest ----"
+          grep "uses-permission" "$MANIFEST" || echo "(none)"
+
+      - name: Set version name and code
+        run: |
+          GRADLE_FILE="android/app/build.gradle"
+          if [ -f "$GRADLE_FILE" ]; then
+            sed -i "s/versionCode [0-9]*/versionCode ${{ inputs.version_code }}/" "$GRADLE_FILE"
+            sed -i "s/versionName \"[^\"]*\"/versionName \"${{ inputs.version_name }}\"/" "$GRADLE_FILE"
+          fi
+
+      # ------------------------------------------------------------------
+      # 5. Custom native behaviour (MainActivity.java)
+      # ------------------------------------------------------------------
+      - name: Resolve package path for MainActivity
+        id: pkgpath
+        run: echo "path=$(echo '${{ inputs.app_id }}' | tr '.' '/')" >> "$GITHUB_OUTPUT"
+
+      - name: Generate asset encryption key (if enabled)
+        id: enckey
+        if: ${{ inputs.asset_encryption == 'true' && inputs.source_type == 'html' }}
+        run: |
+          KEY_HEX=$(openssl rand -hex 32)
+          echo "::add-mask::$KEY_HEX"
+          echo "key=$KEY_HEX" >> "$GITHUB_OUTPUT"
+
+      - name: Generate custom MainActivity.java
+        env:
+          ENC_KEY_HEX: ${{ steps.enckey.outputs.key }}
+        run: |
+          MAIN_DIR="android/app/src/main/java/${{ steps.pkgpath.outputs.path }}"
+          mkdir -p "$MAIN_DIR"
+          USE_ENCRYPTION=false
+          if [ "${{ inputs.asset_encryption }}" = "true" ] && [ "${{ inputs.source_type }}" = "html" ]; then
+            USE_ENCRYPTION=true
+          fi
+
+          {
+            echo "package ${{ inputs.app_id }};"
+            echo ""
+            echo "import android.os.Bundle;"
+            echo "import android.view.WindowManager;"
+            echo "import android.webkit.WebView;"
+            echo "import android.webkit.WebSettings;"
+            echo "import androidx.appcompat.app.AlertDialog;"
+            echo "import com.getcapacitor.BridgeActivity;"
+
+            if [ "$USE_ENCRYPTION" = "true" ]; then
+              echo "import com.getcapacitor.BridgeWebViewClient;"
+              echo "import android.webkit.WebResourceRequest;"
+              echo "import android.webkit.WebResourceResponse;"
+              echo "import java.io.ByteArrayInputStream;"
+              echo "import java.io.ByteArrayOutputStream;"
+              echo "import java.io.InputStream;"
+              echo "import java.util.Arrays;"
+              echo "import javax.crypto.Cipher;"
+              echo "import javax.crypto.spec.IvParameterSpec;"
+              echo "import javax.crypto.spec.SecretKeySpec;"
+            fi
+
+            echo ""
+            echo "public class MainActivity extends BridgeActivity {"
+            echo ""
+            echo "    @Override"
+            echo "    public void onCreate(Bundle savedInstanceState) {"
+            echo "        super.onCreate(savedInstanceState);"
+            echo "        WebView webView = this.bridge.getWebView();"
+            echo "        WebSettings settings = webView.getSettings();"
+
+            if [ "${{ inputs.pc_mode }}" = "true" ]; then
+              echo "        settings.setUserAgentString(\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\");"
+            fi
+
+            if [ "${{ inputs.source_type }}" = "html" ] && [ "${{ inputs.online_mode }}" != "true" ]; then
+              echo "        settings.setBlockNetworkLoads(true);"
+            fi
+
+            if [ "${{ inputs.fullscreen }}" = "true" ]; then
+              echo "        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);"
+            fi
+
+            if [ "$USE_ENCRYPTION" = "true" ]; then
+              JAVA_BYTES=$(echo "$ENC_KEY_HEX" | fold -w2 | sed 's/^/(byte)0x/' | paste -sd, -)
+              echo "        byte[] assetKey = new byte[]{ $JAVA_BYTES };"
+              echo "        webView.setWebViewClient(new EncryptedAssetWebViewClient(this.bridge, assetKey));"
+            fi
+
+            echo "    }"
+
+            if [ "${{ inputs.exit_confirmation }}" = "true" ]; then
+              echo ""
+              echo "    @Override"
+              echo "    public void onBackPressed() {"
+              echo "        if (this.bridge.getWebView().canGoBack()) {"
+              echo "            this.bridge.getWebView().goBack();"
+              echo "            return;"
+              echo "        }"
+              echo "        new AlertDialog.Builder(this)"
+              echo "            .setMessage(\"অ্যাপ থেকে বের হতে চান?\")"
+              echo "            .setPositiveButton(\"হ্যাঁ\", (dialog, which) -> MainActivity.super.onBackPressed())"
+              echo "            .setNegativeButton(\"না\", null)"
+              echo "            .show();"
+              echo "    }"
+            fi
+
+            echo "}"
+
+            if [ "$USE_ENCRYPTION" = "true" ]; then
+              echo ""
+              echo "// Decrypts AES-256-CBC encrypted local assets on the fly. Each encrypted"
+              echo "// file is [16-byte IV][ciphertext]. On any failure, falls back to serving"
+              echo "// the original (encrypted) response rather than crashing the app."
+              echo "class EncryptedAssetWebViewClient extends BridgeWebViewClient {"
+              echo "    private final SecretKeySpec keySpec;"
+              echo ""
+              echo "    EncryptedAssetWebViewClient(com.getcapacitor.Bridge bridge, byte[] key) {"
+              echo "        super(bridge);"
+              echo "        this.keySpec = new SecretKeySpec(key, \"AES\");"
+              echo "    }"
+              echo ""
+              echo "    @Override"
+              echo "    public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {"
+              echo "        WebResourceResponse response = super.shouldInterceptRequest(view, request);"
+              echo "        if (response == null || response.getData() == null) return response;"
+              echo "        try {"
+              echo "            byte[] all = readAll(response.getData());"
+              echo "            if (all.length <= 16) return response;"
+              echo "            byte[] iv = Arrays.copyOfRange(all, 0, 16);"
+              echo "            byte[] cipherText = Arrays.copyOfRange(all, 16, all.length);"
+              echo "            Cipher cipher = Cipher.getInstance(\"AES/CBC/PKCS5Padding\");"
+              echo "            cipher.init(Cipher.DECRYPT_MODE, keySpec, new IvParameterSpec(iv));"
+              echo "            byte[] plain = cipher.doFinal(cipherText);"
+              echo "            return new WebResourceResponse(response.getMimeType(), response.getEncoding(), new ByteArrayInputStream(plain));"
+              echo "        } catch (Exception e) {"
+              echo "            return response;"
+              echo "        }"
+              echo "    }"
+              echo ""
+              echo "    private byte[] readAll(InputStream in) throws java.io.IOException {"
+              echo "        ByteArrayOutputStream bos = new ByteArrayOutputStream();"
+              echo "        byte[] buf = new byte[4096];"
+              echo "        int n;"
+              echo "        while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);"
+              echo "        return bos.toByteArray();"
+              echo "    }"
+              echo "}"
+            fi
+          } > "$MAIN_DIR/MainActivity.java"
+          echo "---- Generated MainActivity.java ----"
+          cat "$MAIN_DIR/MainActivity.java"
+
+      # ------------------------------------------------------------------
+      # 6. Build
+      # ------------------------------------------------------------------
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: 🔒 Encrypt bundled assets (AES-256, EXPERIMENTAL)
+        if: ${{ inputs.asset_encryption == 'true' && inputs.source_type == 'html' }}
+        env:
+          ENC_KEY_HEX: ${{ steps.enckey.outputs.key }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const crypto = require("crypto");
+            const key = Buffer.from(process.env.ENC_KEY_HEX, "hex");
+            const root = "android/app/src/main/assets/public";
+
+            function walk(dir) {
+              for (const name of fs.readdirSync(dir)) {
+                const full = path.join(dir, name);
+                if (fs.statSync(full).isDirectory()) { walk(full); continue; }
+                const data = fs.readFileSync(full);
+                if (data.length === 0) continue;
+                const iv = crypto.randomBytes(16);
+                const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+                const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
+                fs.writeFileSync(full, Buffer.concat([iv, encrypted]));
+              }
+            }
+            walk(root);
+            console.log("Encrypted all files under", root);
+          '
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      # ------------------------------------------------------------------
+      # 7. Publish — direct-download Release asset (+ artifact fallback)
+      # ------------------------------------------------------------------
+      - name: Upload APK as workflow artifact (fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish GitHub Release with the APK attached
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ASSET_NAME="$(echo '${{ inputs.app_name }}' | tr ' ' '_').apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$ASSET_NAME"
+          gh release create "${{ inputs.release_tag }}" "$ASSET_NAME" \
+            --title "${{ inputs.app_name }}" \
+            --notes "Built automatically via the Build APK app."
+.
